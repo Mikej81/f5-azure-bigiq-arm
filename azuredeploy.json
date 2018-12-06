@@ -1,0 +1,155 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminPassword": {
+            "type": "SecureString",
+            "metadata": {
+                "description": "Secure adminPassword"
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "bigiqVMVNET",
+            "apiVersion": "2015-06-15",
+            "location": "usgovvirginia",
+            "tags": {},
+            "properties": {
+                "subnets": [
+                    {
+                        "name": "bigiqVMSubnet",
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24"
+                        }
+                    }
+                ],
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "bigiqVMNSG",
+            "apiVersion": "2015-06-15",
+            "location": "usgovvirginia",
+            "tags": {},
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "default-allow-ssh",
+                        "properties": {
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "protocol": "Tcp",
+                            "priority": 1000,
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "sourcePortRange": "*"
+                        }
+                    }
+                ]
+            },
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "bigiqVMPublicIP",
+            "apiVersion": "2018-01-01",
+            "location": "usgovvirginia",
+            "tags": {},
+            "properties": {
+                "publicIPAllocationMethod": null
+            },
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "bigiqVMVMNic",
+            "apiVersion": "2015-06-15",
+            "location": "usgovvirginia",
+            "tags": {},
+            "properties": {
+                "networkSecurityGroup": {
+                    "id": "/subscriptions/8e9cb3c0-22d1-43f5-9c98-46dedbc16349/resourceGroups/mjc-bigiq-azcli/providers/Microsoft.Network/networkSecurityGroups/bigiqVMNSG"
+                },
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfigbigiqVM",
+                        "properties": {
+                            "subnet": {
+                                "id": "/subscriptions/8e9cb3c0-22d1-43f5-9c98-46dedbc16349/resourceGroups/mjc-bigiq-azcli/providers/Microsoft.Network/virtualNetworks/bigiqVMVNET/subnets/bigiqVMSubnet"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "/subscriptions/8e9cb3c0-22d1-43f5-9c98-46dedbc16349/resourceGroups/mjc-bigiq-azcli/providers/Microsoft.Network/publicIPAddresses/bigiqVMPublicIP"
+                            }
+                        }
+                    }
+                ]
+            },
+            "dependsOn": [
+                "Microsoft.Network/virtualNetworks/bigiqVMVNET",
+                "Microsoft.Network/networkSecurityGroups/bigiqVMNSG",
+                "Microsoft.Network/publicIpAddresses/bigiqVMPublicIP"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "bigiqVM",
+            "apiVersion": "2018-10-01",
+            "location": "usgovvirginia",
+            "plan": {
+                "publisher": "f5-networks",
+                "product": "f5-big-iq",
+                "name": "f5-bigiq-virtual-edition-byol",
+                "promotionCode": null
+            },
+            "tags": {},
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_DS4_v2"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "sku": "f5-bigiq-virtual-edition-byol",
+                        "publisher": "f5-networks",
+                        "version": "6.0.101000",
+                        "offer": "f5-big-iq"
+                    },
+                    "osDisk": {
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                            "storageAccountType": null
+                        },
+                        "name": null,
+                        "createOption": "fromImage"
+                    }
+                },
+                "osProfile": {
+                    "adminUsername": "xadmin",
+                    "computerName": "bigiqVM",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "/subscriptions/8e9cb3c0-22d1-43f5-9c98-46dedbc16349/resourceGroups/mjc-bigiq-azcli/providers/Microsoft.Network/networkInterfaces/bigiqVMVMNic"
+                        }
+                    ]
+                }
+            },
+            "dependsOn": [
+                "Microsoft.Network/networkInterfaces/bigiqVMVMNic"
+            ]
+        }
+    ],
+    "outputs": {}
+}
