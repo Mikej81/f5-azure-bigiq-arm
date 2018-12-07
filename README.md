@@ -2,7 +2,7 @@
 
 Use the appropriate button below to deploy:
 
-- **BIGIQ**: This allows you to launch the template using an existing BIG-IQ device with a pool of licenses to license the BIG-IP VE(s).
+- **BIGIQ**: This allows you to deploy BIG-IQ in Azure.
 
 Commercial
 
