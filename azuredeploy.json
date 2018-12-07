@@ -31,32 +31,6 @@
         },
         "instanceType": {
             "allowedValues": [
-                "Standard_A3",
-                "Standard_A4",
-                "Standard_A5",
-                "Standard_A6",
-                "Standard_A7",
-                "Standard_D3",
-                "Standard_D4",
-                "Standard_D11",
-                "Standard_D12",
-                "Standard_D13",
-                "Standard_D14",
-                "Standard_DS3",
-                "Standard_DS4",
-                "Standard_DS11",
-                "Standard_DS12",
-                "Standard_DS13",
-                "Standard_DS14",
-                "Standard_D3_v2",
-                "Standard_D4_v2",
-                "Standard_D5_v2",
-                "Standard_D11_v2",
-                "Standard_D12_v2",
-                "Standard_D13_v2",
-                "Standard_D14_v2",
-                "Standard_D15_v2",
-                "Standard_DS3_v2",
                 "Standard_DS4_v2",
                 "Standard_DS5_v2",
                 "Standard_DS11_v2",
@@ -82,6 +56,16 @@
             },
             "type": "string"
         },
+        "bigIqVersion": {
+            "allowedValues": [
+                "6.0.100813"
+            ],
+            "defaultValue": "6.0.100813",
+            "metadata": {
+                "description": "F5 BIG-IQ version you want to use."
+            },
+            "type": "string"
+        },
         "vnetName": {
             "metadata": {
                 "description": "The name of the existing virtual network to which you want to connect the BIG-IP VEs."
@@ -89,17 +73,17 @@
             "type": "string"
         },
         "mgmtSubnetName": {
+            "defaultValue": "default",
             "metadata": {
                 "description": "Name of the existing MGMT subnet - with external access to the Internet."
             },
             "type": "string"
         },
-        "bigIqAddress": {
-                "metadata": {
-                    "description": "IP Address of the BIG-IQ Managemet Interface"
-                },
-                "type": "string",
-                "defaultValue": "10.1.0.5"
+        "mgmtIpAddress": {
+            "metadata": {
+                "description": "MGMT subnet IP Address to use for the BIG-IQ management IP address."
+            },
+            "type": "string"
         },
         "restrictedSrcAddress": {
             "defaultValue": "*",
@@ -139,6 +123,13 @@
                 "description": "This deployment can send anonymous statistics to F5 to help us determine how to improve our solutions. If you select **No** statistics are not sent."
             },
             "type": "string"
+        },
+        "avSetChoice": {
+            "defaultValue": "CREATE_NEW",
+            "metadata": {
+                "description": "If you want the VM placed in a new Azure Availability Set, leave the default value of **CREATE_NEW**, otherwise specify the name of the existing Availability Set you want to use. Note: If you are using an existing AV Set, this deployment must be in the same Azure Resource Group as the AV Set."
+            },
+            "type": "string"
         }
     },
     "variables": {
@@ -153,25 +144,28 @@
         "authenticationType": "password",
         "customImage1": "OPTIONAL",
         "bigIpVersion": "latest",
+        "licensePoolKeys": "Do_Not_Create",
+        "regPoolKeys": "Do_Not_Create",
         "adminPasswordOrKey": "[replace(parameters('adminPassword'),'\\n', '\n')]",
         "singleQuote": "'",
         "f5CloudLibsTag": "v4.4.0",
         "f5CloudLibsAzureTag": "v2.4.0",
         "dnsLabel": "[toLower(parameters('dnsLabel'))]",
         "bigIqLicenseKey1": "[parameters('License')]",
-        "licensePoolKeys": "Do_Not_Create",
-        "regPoolKeys": "Do_Not_Create",
         "numberOfInternalIps": "0",
         "instanceName": "[toLower(parameters('instanceName'))]",
+        "newAvailabilitySetName": "[concat(variables('dnsLabel'), '-avset')]",
+        "availabilitySetName": "[replace(parameters('avSetChoice'), 'CREATE_NEW', variables('newAvailabilitySetName'))]",
         "vmname": "[concat(variables('dnsLabel'), '-', variables('instanceName'))]",
         "newStorageAccountName0": "[concat(uniqueString(variables('dnsLabel'), resourceGroup().id, deployment().name), 'stor0')]",
         "newDataStorageAccountName": "[concat(uniqueString(variables('dnsLabel'), resourceGroup().id, deployment().name), 'data000')]",
         "virtualNetworkName": "[parameters('vnetName')]",
         "vnetId": "[resourceId(variables('vnetResourceGroupName'),'Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
         "publicIPAddressType": "Static",
+        "intSubnetPrivateAddress": "[parameters('mgmtIpAddress')]",
         "mgmtPublicIPAddressName": "[concat(variables('dnsLabel'), '-mgmt-pip')]",
         "mgmtPublicIPAddressId": "[resourceId('Microsoft.Network/publicIPAddresses', variables('mgmtPublicIPAddressName'))]",
-        "mgmtSubnetPrivateAddress": "[parameters('bigIqAddress')]",
+        "mgmtSubnetPrivateAddress": "[parameters('mgmtIpAddress')]",
         "mgmtNsgID": "[resourceId('Microsoft.Network/networkSecurityGroups/',concat(variables('dnsLabel'),'-mgmt-nsg'))]",
         "mgmtNicName": "[concat(variables('dnsLabel'), '-mgmt')]",
         "mgmtNicID": "[resourceId('Microsoft.Network/NetworkInterfaces', variables('mgmtNicName'))]",
@@ -180,9 +174,21 @@
         "mgmtRouteGw": "`tmsh list sys management-route default gateway | grep gateway | sed 's/gateway //;s/ //g'`",
         "bigIqLicenseSkuKeyword1": "OPTIONAL",
         "bigIqLicenseUnitOfMeasure": "OPTIONAL",
+        "newDataStorageAccountName": "[concat(uniqueString(variables('dnsLabel'), resourceGroup().id, deployment().name), 'data000')]",
+        "dataStorageAccountType": "Standard_LRS",
         "bigIpMgmtPort": "443",
-        "customImage": "[replace(variables('customImage1'), 'OPTIONAL', '')]",
         "deploymentId": "[concat(variables('subscriptionId'), resourceGroup().id, deployment().name, variables('dnsLabel'))]",
+        "linuxConfiguration": {
+            "disablePasswordAuthentication": true,
+            "ssh": {
+                "publicKeys": [
+                    {
+                        "keyData": "[variables('adminPasswordOrKey')]",
+                        "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]"
+                    }
+                ]
+            }
+        },
         "tagValues": {
                 "application": "APP",
                 "cost": "COST",
@@ -200,12 +206,47 @@
                 "metricsCmd": "[concat(' --metrics customerId:${custId},deploymentId:${deployId},templateName:standalone_1nic-existing-stack-experimental,templateVersion:5.5.0.0,region:', variables('location'), ',bigIpVersion:', variables('bigIpVersion') ,',licenseType:bigiq,cloudLibsVersion:', variables('f5CloudLibsTag'), ',cloudName:azure')]"
             }
         },
+        "skuToUse": "f5-bigiq-virtual-edition-byol",
+        "offerToUse": "f5-big-iq",
+        "imagePlan": {
+            "name": "[variables('skuToUse')]",
+            "product": "[variables('offerToUse')]",
+            "publisher": "f5-networks"
+        },
         "imageReference": {
             "sku": "f5-bigiq-virtual-edition-byol",
             "publisher": "f5-networks",
             "version": "6.0.101000",
             "offer": "f5-big-iq"
         },
+        "premiumInstanceArray": [
+            "Standard_DS2",
+            "Standard_DS3",
+            "Standard_DS4",
+            "Standard_DS11",
+            "Standard_DS12",
+            "Standard_DS13",
+            "Standard_DS14",
+            "Standard_DS2_v2",
+            "Standard_DS3_v2",
+            "Standard_DS4_v2",
+            "Standard_DS5_v2",
+            "Standard_DS11_v2",
+            "Standard_DS12_v2",
+            "Standard_DS13_v2",
+            "Standard_DS14_v2",
+            "Standard_DS15_v2",
+            "Standard_F2S",
+            "Standard_F4S",
+            "Standard_F8S",
+            "Standard_F16S",
+            "Standard_GS2",
+            "Standard_GS3",
+            "Standard_GS4",
+            "Standard_GS5"
+        ],
+        "customImage": "[replace(variables('customImage1'), 'OPTIONAL', '')]",
+        "useCustomImage": "[not(empty(variables('customImage')))]",
         "createNewCustomImage": "[contains(variables('customImage'), 'https://')]",
         "newCustomImageName": "[concat(variables('dnsLabel'), 'image')]",
         "storageProfileArray": {
@@ -312,6 +353,55 @@
             }
         },
         {
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[variables('availabilitySetName')]",
+            "apiVersion": "[variables('computeApiVersion')]",
+            "tags": "[if(empty(variables('tagValues')), json('null'), variables('tagValues'))]",
+            "condition": "[equals(toUpper(parameters('avSetChoice')), 'CREATE_NEW')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "PlatformFaultDomainCount": 2,
+                "PlatformUpdateDomainCount": 2
+            },
+            "sku": {
+                "name": "Aligned"
+            }
+
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('newDataStorageAccountName')]",
+            "apiVersion": "[variables('storageApiVersion')]",
+            "location": "[variables('location')]",
+            "kind": "Storage",
+            "properties": {
+                "supportsHttpsTrafficOnly": true
+            },
+            "sku": {
+                "name": "[variables('dataStorageAccountType')]",
+                "tier": "Standard"
+            },
+            "tags": "[if(empty(variables('tagValues')), json('null'), variables('tagValues'))]"
+        },
+        {
+            "type": "Microsoft.Compute/images",
+            "name": "[variables('newCustomImageName')]",
+            "apiVersion": "[variables('computeApiVersion')]",
+            "condition": "[and(variables('useCustomImage'), variables('createNewCustomImage'))]",
+            "location": "[variables('location')]",
+            "properties": {
+                "storageProfile": {
+                    "osDisk": {
+                        "blobUri": "[variables('customImage')]",
+                        "osState": "Generalized",
+                        "osType": "Linux",
+                        "storageAccountType": "[if(contains(variables('premiumInstanceArray'), parameters('instanceType')), 'Premium_LRS', 'Standard_LRS')]"
+                    }
+                }
+            },
+            "tags": "[if(empty(variables('tagValues')), json('null'), variables('tagValues'))]"
+        },
+        {
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmname')]",
             "apiVersion": "[variables('computeApiVersion')]",
@@ -324,20 +414,22 @@
             },
             "tags": {},
             "properties": {
-                "hardwareProfile": {
-                    "vmSize": "Standard_DS4_v2"
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('availabilitySetName'))]"
                 },
-                "storageProfile": {
-                    "imageReference": {
-                        "sku": "f5-bigiq-virtual-edition-byol",
-                        "publisher": "f5-networks",
-                        "version": "6.0.101000",
-                        "offer": "f5-big-iq"
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[reference(concat('Microsoft.Storage/storageAccounts/', variables('newDataStorageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).primaryEndpoints.blob]"
                     }
                 },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('instanceType')]"
+                },
+                "storageProfile": "[if(variables('useCustomImage'), variables('storageProfileArray').customImage, variables('storageProfileArray').platformImage)]",
                 "osProfile": {
-                    "adminUsername": "xadmin",
-                    "computerName": "bigiqVM",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "computerName": "[variables('vmname')]",
                     "adminPassword": "[parameters('adminPassword')]",
                     "linuxConfiguration": "[if(equals(variables('authenticationType'), 'password'), json('null'), variables('linuxConfiguration'))]"
                 },
@@ -353,6 +445,8 @@
                 }
             },
             "dependsOn": [
+                "[concat('Microsoft.Storage/storageAccounts/', variables('newDataStorageAccountName'))]",
+                "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
                 "[concat('Microsoft.Network/networkInterfaces/', variables('mgmtNicName'), '0')]"
             ]
         },
