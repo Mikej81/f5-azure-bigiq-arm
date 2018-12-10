@@ -6,8 +6,8 @@ Use the appropriate button below to deploy:
 
 Commercial
 
-  [![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/Mikej81/f5-azure-bigiq-arm/master/azuredeploy.json?token=ANRCi64jKoHuQ0QwBGqjMpPtHGUWsV1fks5cErZmwA%3D%3D)
+  [![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMikej81%2Ff5-azure-bigiq-arm%2Fmaster%2Fazuredeploy.json)
 
 MAG
 
-  [![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.us/#create/Microsoft.Template/uri/https://raw.githubusercontent.com/Mikej81/f5-azure-bigiq-arm/master/azuredeploy.json?token=ANRCi64jKoHuQ0QwBGqjMpPtHGUWsV1fks5cErZmwA%3D%3D)
+  [![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMikej81%2Ff5-azure-bigiq-arm%2Fmaster%2Fazuredeploy.json)
