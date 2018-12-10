@@ -506,14 +506,5 @@
             "tags": "[if(empty(variables('tagValues')), json('null'), variables('tagValues'))]"
         }
     ],
-    "outputs": {
-        "GUI-URL": {
-            "type": "string",
-            "value": "[concat('https://', reference(variables('mgmtPublicIPAddressId')).dnsSettings.fqdn, ':', variables('bigIqpMgmtPort'))]"
-        },
-        "SSH-URL": {
-            "type": "string",
-            "value": "[concat(reference(variables('mgmtPublicIPAddressId')).dnsSettings.fqdn, ' ',22)]"
-        }
-    }
+    "outputs": {}
 }
