@@ -85,6 +85,11 @@
             },
             "type": "string"
         },
+        "trafficIpAddress": {
+            "metadata": {
+                "description": "Traffic subnet IP address to use for the BIG-IQ discover / DCD."
+            },
+        },
         "restrictedSrcAddress": {
             "defaultValue": "*",
             "metadata": {
@@ -152,7 +157,7 @@
         "f5CloudLibsAzureTag": "v2.4.0",
         "dnsLabel": "[toLower(parameters('dnsLabel'))]",
         "bigIqLicenseKey1": "[parameters('License')]",
-        "numberOfInternalIps": "0",
+        "numberOfInternalIps": "2",
         "instanceName": "[toLower(parameters('instanceName'))]",
         "newAvailabilitySetName": "[concat(variables('dnsLabel'), '-avset')]",
         "availabilitySetName": "[replace(parameters('avSetChoice'), 'CREATE_NEW', variables('newAvailabilitySetName'))]",
@@ -163,6 +168,7 @@
         "vnetId": "[resourceId(variables('vnetResourceGroupName'),'Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
         "publicIPAddressType": "Static",
         "intSubnetPrivateAddress": "[parameters('mgmtIpAddress')]",
+        "intSubnetPrivateAddress2": "[paramters('trafficIpAddress')]",
         "mgmtPublicIPAddressName": "[concat(variables('dnsLabel'), '-mgmt-pip')]",
         "mgmtPublicIPAddressId": "[resourceId('Microsoft.Network/publicIPAddresses', variables('mgmtPublicIPAddressName'))]",
         "mgmtSubnetPrivateAddress": "[parameters('mgmtIpAddress')]",
@@ -350,6 +356,27 @@
                 "networkSecurityGroup": {
                     "id": "[variables('mgmtNsgId')]"
                 }
+            }
+        },
+                {
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[concat(variables('mgmtNicName'), '0')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "location": "[variables('location')]",
+            "tags": {},
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "[concat(variables('dnsLabel'), '-traff-ipconfig')]",
+                        "properties": {
+                            "privateIPAddress": "[variables('intSubnetPrivateAddress2')]",
+                            "privateIPAllocationMethod": "Static",
+                            "subnet": {
+                                "id": "[variables('mgmtSubnetId')]"
+                            }
+                        }
+                    }
+                ]
             }
         },
         {
