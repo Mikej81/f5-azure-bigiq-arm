@@ -89,6 +89,7 @@
             "metadata": {
                 "description": "Traffic subnet IP address to use for the BIG-IQ discover / DCD."
             },
+            "type": "string"
         },
         "restrictedSrcAddress": {
             "defaultValue": "*",
@@ -168,13 +169,15 @@
         "vnetId": "[resourceId(variables('vnetResourceGroupName'),'Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
         "publicIPAddressType": "Static",
         "intSubnetPrivateAddress": "[parameters('mgmtIpAddress')]",
-        "intSubnetPrivateAddress2": "[paramters('trafficIpAddress')]",
+        "intSubnetPrivateAddress2": "[parameters('trafficIpAddress')]",
         "mgmtPublicIPAddressName": "[concat(variables('dnsLabel'), '-mgmt-pip')]",
         "mgmtPublicIPAddressId": "[resourceId('Microsoft.Network/publicIPAddresses', variables('mgmtPublicIPAddressName'))]",
         "mgmtSubnetPrivateAddress": "[parameters('mgmtIpAddress')]",
         "mgmtNsgID": "[resourceId('Microsoft.Network/networkSecurityGroups/',concat(variables('dnsLabel'),'-mgmt-nsg'))]",
         "mgmtNicName": "[concat(variables('dnsLabel'), '-mgmt')]",
+        "traffNicName": "[concat(variables('dnsLabel'), '-traff')]",
         "mgmtNicID": "[resourceId('Microsoft.Network/NetworkInterfaces', variables('mgmtNicName'))]",
+        "traffNicID": "[resourceId('Microsoft.Network/NetworkInterfaces', variables('traffNicName'))]",
         "mgmtSubnetName": "[parameters('mgmtSubnetName')]",
         "mgmtSubnetId": "[concat(variables('vnetId'), '/subnets/', variables('mgmtSubnetName'))]",
         "mgmtRouteGw": "`tmsh list sys management-route default gateway | grep gateway | sed 's/gateway //;s/ //g'`",
@@ -360,7 +363,7 @@
         },
                 {
             "type": "Microsoft.Network/networkInterfaces",
-            "name": "[concat(variables('mgmtNicName'), '0')]",
+            "name": "[concat(variables('traffNicName'), '0')]",
             "apiVersion": "[variables('apiVersion')]",
             "location": "[variables('location')]",
             "tags": {},
@@ -467,6 +470,12 @@
                             "properties": {
                                 "primary": true
                             }
+                        },
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('traffNicName'), '0'))]",
+                            "properties": {
+                                "primary": false
+                            }
                         }
                     ]
                 }
@@ -474,7 +483,8 @@
             "dependsOn": [
                 "[concat('Microsoft.Storage/storageAccounts/', variables('newDataStorageAccountName'))]",
                 "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]",
-                "[concat('Microsoft.Network/networkInterfaces/', variables('mgmtNicName'), '0')]"
+                "[concat('Microsoft.Network/networkInterfaces/', variables('mgmtNicName'), '0')]",
+                "[concat('Microsoft.Network/networkInterfaces/', variables('traffNicName'), '0')]"
             ]
         },
         {
