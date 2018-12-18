@@ -73,7 +73,7 @@
             "type": "string"
         },
         "mgmtSubnetName": {
-            "defaultValue": "default",
+            "defaultValue": "bigiq_oob",
             "metadata": {
                 "description": "Name of the existing MGMT subnet - with external access to the Internet."
             },
@@ -82,6 +82,13 @@
         "mgmtIpAddress": {
             "metadata": {
                 "description": "MGMT subnet IP Address to use for the BIG-IQ management IP address."
+            },
+            "type": "string"
+        },
+        "traffSubnetName": {
+            "defaultValue": "Management_Subnet",
+            "metadata": {
+                "description": "Name of the existing MGMT subnet."
             },
             "type": "string"
         },
@@ -179,7 +186,9 @@
         "mgmtNicID": "[resourceId('Microsoft.Network/NetworkInterfaces', variables('mgmtNicName'))]",
         "traffNicID": "[resourceId('Microsoft.Network/NetworkInterfaces', variables('traffNicName'))]",
         "mgmtSubnetName": "[parameters('mgmtSubnetName')]",
+        "traffSubnetName": "[parameters('traffSubnetName')]",
         "mgmtSubnetId": "[concat(variables('vnetId'), '/subnets/', variables('mgmtSubnetName'))]",
+        "traffSubnetId": "[concat(variables('vnetId'), '/subnets/', variables('traffSubnetName'))]",
         "mgmtRouteGw": "`tmsh list sys management-route default gateway | grep gateway | sed 's/gateway //;s/ //g'`",
         "bigIqLicenseSkuKeyword1": "OPTIONAL",
         "bigIqLicenseUnitOfMeasure": "OPTIONAL",
@@ -375,7 +384,7 @@
                             "privateIPAddress": "[variables('intSubnetPrivateAddress2')]",
                             "privateIPAllocationMethod": "Static",
                             "subnet": {
-                                "id": "[variables('mgmtSubnetId')]"
+                                "id": "[variables('traffSubnetId')]"
                             }
                         }
                     }
